@@ -1,4 +1,5 @@
-const API_BASE = "https://dev.to/api/readinglist";
+const API_BASE_READING_LIST = "https://dev.to/api/readinglist";
+const API_BASE_USER_DATA = "https://dev.to/async_info/base_data";
 const PER_PAGE = 25;
 
 // ---------- DOM references ----------
@@ -7,7 +8,6 @@ const $ = (id) => document.getElementById(id);
 const mainView = $("mainView");
 const settingsView = $("settingsView");
 const articleList = $("articleList");
-const featuredCard = $("featuredCard");
 const featuredTitle = $("featuredTitle");
 const featuredAuthor = $("featuredAuthor");
 const featuredReadBtn = $("featuredReadBtn");
@@ -57,7 +57,6 @@ function setVisibleState(stateId) {
     stateEmpty,
     stateLoading,
     stateError,
-    featuredCard,
     listHeader,
     articleList,
   ].forEach((el) => el.classList.add("hidden"));
@@ -70,9 +69,12 @@ function setVisibleState(stateId) {
 
 // ---------- Fetch a single page ----------
 async function fetchPage(apiKey, page) {
-  const res = await fetch(`${API_BASE}?page=${page}&per_page=${PER_PAGE}`, {
-    headers: { "api-key": apiKey },
-  });
+  const res = await fetch(
+    `${API_BASE_READING_LIST}?page=${page}&per_page=${PER_PAGE}`,
+    {
+      headers: { "api-key": apiKey },
+    },
+  );
 
   if (!res.ok) {
     if (res.status === 401)
@@ -107,9 +109,6 @@ async function fetchReadingList(apiKey) {
     }
 
     setVisibleState(null);
-    shuffleFeatured();
-    renderFeatured();
-    featuredCard.classList.remove("hidden");
     listHeader.classList.remove("hidden");
     articleList.classList.remove("hidden");
     renderNewArticles(articles);
@@ -187,20 +186,6 @@ function updateCounts() {
   listCount.textContent = `${articles.length} articles`;
 }
 
-function renderFeatured() {
-  if (!featuredArticle) return;
-  const a = featuredArticle.article;
-  featuredTitle.textContent = a.title;
-  featuredAuthor.textContent = a.user?.name || "Unknown";
-  featuredReadBtn.onclick = () => chrome.tabs.create({ url: a.url });
-}
-
-function shuffleFeatured() {
-  if (articles.length === 0) return;
-  const idx = Math.floor(Math.random() * articles.length);
-  featuredArticle = articles[idx];
-}
-
 // ---------- Utility ----------
 function escapeHTML(str) {
   const div = document.createElement("div");
@@ -258,16 +243,6 @@ $("btnRefresh").addEventListener("click", () => {
       showToast("Add your API key first");
     }
   });
-});
-
-// Shuffle
-$("btnShuffle").addEventListener("click", () => {
-  shuffleFeatured();
-  renderFeatured();
-  // Re-render all cards to exclude the new featured
-  articleList.innerHTML = "";
-  renderNewArticles(articles);
-  showToast("🔀 Shuffled!");
 });
 
 // Retry
