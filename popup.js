@@ -1,6 +1,6 @@
 const API_BASE_READING_LIST = "https://dev.to/api/readinglist";
-const API_BASE_USER_DATA = "https://dev.to/async_info/base_data";
-const PER_PAGE = 25;
+const API_BASE_USER_DATA = "https://dev.to/api/users/me";
+const PER_PAGE = 50;
 
 // ---------- DOM references ----------
 const $ = (id) => document.getElementById(id);
@@ -27,7 +27,7 @@ const scrollLoader = $("scrollLoader");
 
 let articles = [];
 let featuredArticle = null;
-let currentPage = 0;
+let currentPage = 1;
 let isLoading = false;
 let hasMore = true;
 let currentApiKey = "";
@@ -88,7 +88,7 @@ async function fetchPage(apiKey, page) {
 // ---------- Initial load ----------
 async function fetchReadingList(apiKey) {
   currentApiKey = apiKey;
-  currentPage = 0;
+  currentPage = 1;
   articles = [];
   hasMore = true;
   featuredArticle = null;
@@ -182,8 +182,13 @@ function renderNewArticles(items) {
 }
 
 function updateCounts() {
-  articleCount.textContent = articles.length;
-  listCount.textContent = `${articles.length} articles`;
+  if (hasMore) {
+    articleCount.textContent = `${articles.length}+`;
+    listCount.textContent = `${articles.length}+ articles`;
+  } else {
+    articleCount.textContent = articles.length;
+    listCount.textContent = `${articles.length} articles`;
+  }
 }
 
 // ---------- Utility ----------
