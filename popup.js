@@ -1,4 +1,5 @@
 const API_BASE = "https://dev.to/api/readinglist";
+const PER_PAGE = 25;
 
 // ---------- DOM references ----------
 const $ = (id) => document.getElementById(id);
@@ -22,9 +23,14 @@ const errorMsg = $("errorMsg");
 const apiKeyInput = $("apiKeyInput");
 const intervalSelector = $("intervalSelector");
 const toast = $("toast");
+const scrollLoader = $("scrollLoader");
 
 let articles = [];
 let featuredArticle = null;
+let currentPage = 0;
+let isLoading = false;
+let hasMore = true;
+let currentApiKey = "";
 
 // ---------- Toast helper ----------
 function showToast(message, duration = 2200) {
@@ -55,82 +61,103 @@ function setVisibleState(stateId) {
     listHeader,
     articleList,
   ].forEach((el) => el.classList.add("hidden"));
+  if (scrollLoader) scrollLoader.classList.add("hidden");
   if (stateId) {
     const el = $(stateId);
     if (el) el.classList.remove("hidden");
   }
 }
 
-// ---------- Fetch reading list ----------
+// ---------- Fetch a single page ----------
+async function fetchPage(apiKey, page) {
+  const res = await fetch(`${API_BASE}?page=${page}&per_page=${PER_PAGE}`, {
+    headers: { "api-key": apiKey },
+  });
+
+  if (!res.ok) {
+    if (res.status === 401)
+      throw new Error("Invalid API key. Please check your settings.");
+    throw new Error(`API error: ${res.status}`);
+  }
+
+  return await res.json();
+}
+
+// ---------- Initial load ----------
 async function fetchReadingList(apiKey) {
+  currentApiKey = apiKey;
+  currentPage = 0;
+  articles = [];
+  hasMore = true;
+  featuredArticle = null;
+  articleList.innerHTML = "";
+
   setVisibleState("stateLoading");
 
   try {
-    const allArticles = [];
-    let page = 1;
-    const perPage = 30;
-    let hasMore = true;
+    const data = await fetchPage(apiKey, currentPage);
+    articles = data;
+    hasMore = data.length >= PER_PAGE;
+    currentPage++;
 
-    // Fetch up to 5 pages (150 articles max)
-    while (hasMore && page <= 5) {
-      const res = await fetch(`${API_BASE}?page=${page}&per_page=${perPage}`, {
-        headers: { "api-key": apiKey },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401)
-          throw new Error("Invalid API key. Please check your settings.");
-        throw new Error(`API error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      allArticles.push(...data);
-
-      if (data.length < perPage) {
-        hasMore = false;
-      }
-
-      page++;
+    if (articles.length === 0) {
+      setVisibleState("stateEmpty");
+      articleCount.textContent = "0";
+      return;
     }
 
-    articles = allArticles;
-    renderArticles();
+    setVisibleState(null);
+    shuffleFeatured();
+    renderFeatured();
+    featuredCard.classList.remove("hidden");
+    listHeader.classList.remove("hidden");
+    articleList.classList.remove("hidden");
+    renderNewArticles(articles);
+    updateCounts();
   } catch (err) {
     setVisibleState("stateError");
     errorMsg.textContent = err.message;
   }
 }
 
-// ---------- Render ----------
-function renderArticles() {
-  if (articles.length === 0) {
-    setVisibleState("stateEmpty");
-    articleCount.textContent = "0";
-    return;
+// ---------- Load more (infinite scroll) ----------
+async function loadMore() {
+  if (isLoading || !hasMore || !currentApiKey) return;
+  isLoading = true;
+  if (scrollLoader) scrollLoader.classList.remove("hidden");
+
+  try {
+    const data = await fetchPage(currentApiKey, currentPage);
+    if (data.length < PER_PAGE) hasMore = false;
+    if (data.length === 0) {
+      isLoading = false;
+      if (scrollLoader) scrollLoader.classList.add("hidden");
+      return;
+    }
+
+    articles.push(...data);
+    currentPage++;
+    renderNewArticles(data);
+    updateCounts();
+  } catch (err) {
+    showToast("⚠️ Failed to load more");
   }
 
-  setVisibleState(null); // hide all states
+  isLoading = false;
+  if (scrollLoader) scrollLoader.classList.add("hidden");
+}
 
-  // Update counts
-  articleCount.textContent = articles.length;
-  listCount.textContent = `${articles.length} articles`;
-  listHeader.classList.remove("hidden");
-  articleList.classList.remove("hidden");
+// ---------- Render new batch of articles ----------
+function renderNewArticles(items) {
+  const startIdx = articleList.children.length;
 
-  // Show featured card
-  if (!featuredArticle) shuffleFeatured();
-  renderFeatured();
-  featuredCard.classList.remove("hidden");
-
-  // Render list (exclude featured)
-  articleList.innerHTML = "";
-  articles.forEach((item, idx) => {
+  items.forEach((item, i) => {
     const article = item.article;
     if (featuredArticle && article.id === featuredArticle.article.id) return;
 
     const card = document.createElement("div");
     card.className = "article-card";
-    card.style.animationDelay = `${idx * 0.04}s`;
+    card.style.animationDelay = `${(startIdx + i) * 0.04}s`;
 
     const initial = (article.user?.name || "U").charAt(0).toUpperCase();
     const avatarHTML = article.user?.profile_image_90
@@ -145,15 +172,19 @@ function renderArticles() {
         <button class="article-read-btn" data-url="${article.url}">Read Now →</button>
       </div>
     `;
+
+    // Attach click handler immediately
+    card.querySelector(".article-read-btn").addEventListener("click", () => {
+      chrome.tabs.create({ url: article.url });
+    });
+
     articleList.appendChild(card);
   });
+}
 
-  // Attach click handlers
-  articleList.querySelectorAll(".article-read-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      chrome.tabs.create({ url: btn.dataset.url });
-    });
-  });
+function updateCounts() {
+  articleCount.textContent = articles.length;
+  listCount.textContent = `${articles.length} articles`;
 }
 
 function renderFeatured() {
@@ -177,17 +208,22 @@ function escapeHTML(str) {
   return div.innerHTML;
 }
 
+// ---------- Infinite scroll listener ----------
+articleList.addEventListener("scroll", () => {
+  const { scrollTop, scrollHeight, clientHeight } = articleList;
+  if (scrollTop + clientHeight >= scrollHeight - 60) {
+    loadMore();
+  }
+});
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
-  // Load stored data
   const data = await chrome.storage.local.get(["devtoApiKey", "reminderHours"]);
   const apiKey = data.devtoApiKey || "";
   const hours = data.reminderHours ?? 4;
 
-  // Update reminder status
   reminderStatus.textContent = hours > 0 ? `${hours}h` : "off";
 
-  // Pre-fill settings
   apiKeyInput.value = apiKey;
   intervalSelector.querySelectorAll(".interval-option").forEach((btn) => {
     btn.classList.toggle("active", parseInt(btn.dataset.hours) === hours);
@@ -207,7 +243,6 @@ $("btnSettings").addEventListener("click", showSettings);
 $("stateNoKeyBtn").addEventListener("click", showSettings);
 $("btnBack").addEventListener("click", () => {
   showMain();
-  // Re-fetch if key was possibly changed
   chrome.storage.local.get("devtoApiKey", (data) => {
     if (data.devtoApiKey) fetchReadingList(data.devtoApiKey);
   });
@@ -217,7 +252,6 @@ $("btnBack").addEventListener("click", () => {
 $("btnRefresh").addEventListener("click", () => {
   chrome.storage.local.get("devtoApiKey", (data) => {
     if (data.devtoApiKey) {
-      featuredArticle = null;
       fetchReadingList(data.devtoApiKey);
       showToast("Refreshing…");
     } else {
@@ -230,7 +264,9 @@ $("btnRefresh").addEventListener("click", () => {
 $("btnShuffle").addEventListener("click", () => {
   shuffleFeatured();
   renderFeatured();
-  renderArticles();
+  // Re-render all cards to exclude the new featured
+  articleList.innerHTML = "";
+  renderNewArticles(articles);
   showToast("🔀 Shuffled!");
 });
 
@@ -267,13 +303,11 @@ $("btnSave").addEventListener("click", async () => {
 
   await chrome.storage.local.set({ devtoApiKey: key, reminderHours: hours });
 
-  // Update alarm via background
   chrome.runtime.sendMessage({ type: "UPDATE_ALARM", hours });
 
   reminderStatus.textContent = hours > 0 ? `${hours}h` : "off";
   showToast("✅ Settings saved!");
 
-  // Switch back and refresh
   showMain();
   fetchReadingList(key);
 });

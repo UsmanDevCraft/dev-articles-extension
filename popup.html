@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=350" />
+  <meta name="viewport" content="width=380" />
   <title>Dev.to Un-Sticker</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -15,10 +15,10 @@
     <header class="header">
       <div class="header-top">
         <div class="brand">
-          <div class="brand-logo">📌</div>
+          <div class="brand-logo">DEV</div>
           <div>
             <div class="brand-name">Un-Sticker</div>
-            <div class="brand-tag">Dev.to Reading List</div>
+            <div class="brand-tag">Reading List</div>
           </div>
         </div>
         <div class="header-actions">
@@ -48,7 +48,13 @@
       <span class="list-title">Your List</span>
       <span class="list-count" id="listCount"></span>
     </div>
-    <div class="article-list" id="articleList"></div>
+    <div class="article-list" id="articleList">
+      <!-- Cards injected here by JS -->
+      <div id="scrollLoader" class="scroll-loader hidden">
+        <div class="mini-spinner"></div>
+        <span>Loading more…</span>
+      </div>
+    </div>
 
     <!-- Empty / No Key states -->
     <div id="stateNoKey" class="state-container hidden">
