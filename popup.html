@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=350" />
+  <title>Dev.to Un-Sticker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div id="mainView">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-top">
+        <div class="brand">
+          <div class="brand-logo">📌</div>
+          <div>
+            <div class="brand-name">Un-Sticker</div>
+            <div class="brand-tag">Dev.to Reading List</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="btnRefresh" title="Refresh list">🔄</button>
+          <button class="icon-btn" id="btnSettings" title="Settings">⚙️</button>
+        </div>
+      </div>
+      <div class="stats-bar">
+        <div class="stat-chip"><span class="dot"></span> <span id="articleCount">0</span> saved</div>
+        <div class="stat-chip">⏰ Reminders&nbsp;<span id="reminderStatus">off</span></div>
+      </div>
+    </header>
+
+    <!-- Featured / Shuffled Article -->
+    <div id="featuredCard" class="featured-card hidden">
+      <div class="featured-label"><span class="sparkle">✨</span> Random Pick</div>
+      <div class="featured-title" id="featuredTitle">—</div>
+      <div class="featured-meta">by <span id="featuredAuthor">—</span></div>
+      <div class="featured-actions">
+        <button class="btn-primary" id="featuredReadBtn">Read Now →</button>
+        <button class="btn-outline" id="btnShuffle" title="Shuffle">🔀 Shuffle</button>
+      </div>
+    </div>
+
+    <!-- Article List -->
+    <div class="list-header" id="listHeader">
+      <span class="list-title">Your List</span>
+      <span class="list-count" id="listCount"></span>
+    </div>
+    <div class="article-list" id="articleList"></div>
+
+    <!-- Empty / No Key states -->
+    <div id="stateNoKey" class="state-container hidden">
+      <div class="state-icon">🔑</div>
+      <div class="state-title">Connect Your Account</div>
+      <div class="state-msg">Add your Dev.to API key in Settings to get started.</div>
+      <button class="state-btn" id="stateNoKeyBtn">Open Settings</button>
+    </div>
+
+    <div id="stateEmpty" class="state-container hidden">
+      <div class="state-icon">🎉</div>
+      <div class="state-title">All Caught Up!</div>
+      <div class="state-msg">Your reading list is empty. Save some articles on Dev.to to see them here.</div>
+    </div>
+
+    <div id="stateLoading" class="state-container hidden">
+      <div class="spinner"></div>
+      <div class="state-title">Fetching articles…</div>
+    </div>
+
+    <div id="stateError" class="state-container hidden">
+      <div class="state-icon">⚠️</div>
+      <div class="state-title">Something went wrong</div>
+      <div class="state-msg" id="errorMsg">Could not fetch your reading list.</div>
+      <button class="state-btn" id="retryBtn">Try Again</button>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS VIEW ===== -->
+  <div id="settingsView" class="settings-panel">
+    <div class="settings-title">⚙️ Settings</div>
+    <div class="settings-subtitle">Configure your Dev.to API key and reminder interval.</div>
+
+    <div class="form-group">
+      <label class="form-label" for="apiKeyInput">API Key</label>
+      <input type="password" class="form-input" id="apiKeyInput" placeholder="paste your api key here…"
+        autocomplete="off" />
+      <div class="form-hint">
+        Generate one at
+        <a href="https://dev.to/settings/extensions" target="_blank" rel="noopener">dev.to/settings/extensions</a>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Reminder Interval</label>
+      <div class="interval-selector" id="intervalSelector">
+        <button class="interval-option" data-hours="1">1 hr</button>
+        <button class="interval-option" data-hours="2">2 hrs</button>
+        <button class="interval-option active" data-hours="4">4 hrs</button>
+        <button class="interval-option" data-hours="8">8 hrs</button>
+        <button class="interval-option" data-hours="0">Off</button>
+      </div>
+    </div>
+
+    <button class="btn-save" id="btnSave">Save Settings</button>
+    <button class="btn-back" id="btnBack">← Back to List</button>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>
