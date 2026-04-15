@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Unstick your Dev.to reading list — get reminded of saved articles you've been meaning to read.",
   "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": ["https://dev.to/api/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
