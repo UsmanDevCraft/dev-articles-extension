@@ -123,8 +123,17 @@ body {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.5);
   letter-spacing: 0.5px;
-  text-transform: uppercase;
   margin-top: 1px;
+}
+
+.brand-tag.user-link {
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.brand-tag.user-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .header-actions {

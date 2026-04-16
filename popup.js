@@ -8,6 +8,10 @@ const $ = (id) => document.getElementById(id);
 const mainView = $("mainView");
 const settingsView = $("settingsView");
 const articleList = $("articleList");
+const userName = $("userName");
+const userFullName = $("userFullName");
+const userProfileImg = $("userProfileImg");
+const defaultLogo = $("defaultLogo");
 const featuredTitle = $("featuredTitle");
 const featuredAuthor = $("featuredAuthor");
 const featuredReadBtn = $("featuredReadBtn");
@@ -85,6 +89,21 @@ async function fetchPage(apiKey, page) {
   return await res.json();
 }
 
+// ---------- Fetch User Data ----------
+async function fetchUserData(apiKey) {
+  const res = await fetch(`${API_BASE_USER_DATA}`, {
+    headers: { "api-key": apiKey },
+  });
+
+  if (!res.ok) {
+    if (res.status === 401)
+      throw new Error("Invalid API key. Please check your settings.");
+    throw new Error(`API error: ${res.status}`);
+  }
+
+  return await res.json();
+}
+
 // ---------- Initial load ----------
 async function fetchReadingList(apiKey) {
   currentApiKey = apiKey;
@@ -97,7 +116,30 @@ async function fetchReadingList(apiKey) {
   setVisibleState("stateLoading");
 
   try {
-    const data = await fetchPage(apiKey, currentPage);
+    const [data, userData] = await Promise.all([
+      fetchPage(apiKey, currentPage),
+      fetchUserData(apiKey).catch((err) => null),
+    ]);
+
+    if (userData) {
+      if (userData.profile_image && userProfileImg && defaultLogo) {
+        userProfileImg.src = userData.profile_image;
+        userProfileImg.style.display = "block";
+        defaultLogo.style.display = "none";
+      }
+      if (userData.name && userFullName) {
+        userFullName.textContent = userData.name;
+      }
+      if (userData.username && userName) {
+        userName.textContent = "@" + userData.username;
+        userName.classList.add("user-link");
+        userName.title = `Visit @${userData.username} on Dev.to`;
+        userName.onclick = () => {
+          chrome.tabs.create({ url: `https://dev.to/${userData.username}` });
+        };
+      }
+    }
+
     articles = data;
     hasMore = data.length >= PER_PAGE;
     currentPage++;
