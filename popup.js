@@ -17,7 +17,10 @@ const featuredAuthor = $("featuredAuthor");
 const featuredReadBtn = $("featuredReadBtn");
 const articleCount = $("articleCount");
 const listHeader = $("listHeader");
-const listCount = $("listCount");
+const listTabs = $("listTabs");
+const countAll = $("countAll");
+const countUnread = $("countUnread");
+const countRead = $("countRead");
 const reminderStatus = $("reminderStatus");
 const stateNoKey = $("stateNoKey");
 const stateEmpty = $("stateEmpty");
@@ -35,6 +38,8 @@ let currentPage = 1;
 let isLoading = false;
 let hasMore = true;
 let currentApiKey = "";
+let readArticles = [];
+let activeTab = "all";
 
 // ---------- Toast helper ----------
 function showToast(message, duration = 2200) {
@@ -111,7 +116,7 @@ async function fetchReadingList(apiKey) {
   articles = [];
   hasMore = true;
   featuredArticle = null;
-  articleList.innerHTML = "";
+  articleList.querySelectorAll(".article-card").forEach((el) => el.remove());
 
   setVisibleState("stateLoading");
 
@@ -190,14 +195,17 @@ async function loadMore() {
 
 // ---------- Render new batch of articles ----------
 function renderNewArticles(items) {
-  const startIdx = articleList.children.length;
+  const startIdx = articleList.querySelectorAll(".article-card").length;
 
   items.forEach((item, i) => {
     const article = item.article;
     if (featuredArticle && article.id === featuredArticle.article.id) return;
 
+    const isRead = readArticles.includes(article.id);
     const card = document.createElement("div");
     card.className = "article-card";
+    card.dataset.status = isRead ? "read" : "unread";
+    card.dataset.id = article.id;
     card.style.animationDelay = `${(startIdx + i) * 0.04}s`;
 
     const initial = (article.user?.name || "U").charAt(0).toUpperCase();
@@ -206,30 +214,79 @@ function renderNewArticles(items) {
       : `<div class="article-avatar-placeholder">${initial}</div>`;
 
     card.innerHTML = `
+      <div class="article-status-badge">✓</div>
       ${avatarHTML}
       <div class="article-body">
         <div class="article-title">${escapeHTML(article.title)}</div>
         <div class="article-author">by ${escapeHTML(article.user?.name || "Unknown")}</div>
-        <button class="article-read-btn" data-url="${article.url}">Read Now →</button>
+        <div class="article-actions">
+          <button class="article-read-btn" data-url="${article.url}">Read Now →</button>
+          <button class="article-toggle-read" title="Mark Read/Unread">
+            <span class="read-icon">✓</span> <span class="read-text">${isRead ? "Read" : "Mark as Read"}</span>
+          </button>
+        </div>
       </div>
     `;
 
-    // Attach click handler immediately
     card.querySelector(".article-read-btn").addEventListener("click", () => {
       chrome.tabs.create({ url: article.url });
+      if (!readArticles.includes(article.id)) {
+        toggleReadStatus(article.id, card);
+      }
     });
 
-    articleList.appendChild(card);
+    card.querySelector(".article-toggle-read").addEventListener("click", () => {
+      toggleReadStatus(article.id, card);
+    });
+
+    articleList.insertBefore(card, scrollLoader);
   });
+
+  checkScrollState();
+}
+
+async function toggleReadStatus(id, cardNode) {
+  const isRead = readArticles.includes(id);
+  const toggleText = cardNode.querySelector(".read-text");
+
+  if (isRead) {
+    readArticles = readArticles.filter((num) => num !== id);
+    cardNode.dataset.status = "unread";
+    if (toggleText) toggleText.textContent = "Mark as Read";
+  } else {
+    readArticles.push(id);
+    cardNode.dataset.status = "read";
+    if (toggleText) toggleText.textContent = "Read";
+  }
+  await chrome.storage.local.set({ readArticles });
+  updateCounts();
+  checkScrollState();
 }
 
 function updateCounts() {
+  const readCount = articles.filter((item) =>
+    readArticles.includes(item.article.id),
+  ).length;
+  const unreadCount = articles.length - readCount;
+
   if (hasMore) {
     articleCount.textContent = `${articles.length}+`;
-    listCount.textContent = `${articles.length}+ articles`;
+    if (countAll) countAll.textContent = `${articles.length}+`;
+    if (countUnread) countUnread.textContent = `${unreadCount}+`;
+    if (countRead) countRead.textContent = `${readCount}+`;
   } else {
     articleCount.textContent = articles.length;
-    listCount.textContent = `${articles.length} articles`;
+    if (countAll) countAll.textContent = articles.length;
+    if (countUnread) countUnread.textContent = unreadCount;
+    if (countRead) countRead.textContent = readCount;
+  }
+}
+
+function checkScrollState() {
+  if (!isLoading && hasMore) {
+    if (articleList.scrollHeight <= articleList.clientHeight + 60) {
+      loadMore();
+    }
   }
 }
 
@@ -250,9 +307,14 @@ articleList.addEventListener("scroll", () => {
 
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
-  const data = await chrome.storage.local.get(["devtoApiKey", "reminderHours"]);
+  const data = await chrome.storage.local.get([
+    "devtoApiKey",
+    "reminderHours",
+    "readArticles",
+  ]);
   const apiKey = data.devtoApiKey || "";
   const hours = data.reminderHours ?? 4;
+  readArticles = data.readArticles || [];
 
   reminderStatus.textContent = hours > 0 ? `${hours}h` : "off";
 
@@ -269,6 +331,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ---------- Event listeners ----------
+
+if (listTabs) {
+  listTabs.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab-btn");
+    if (!btn) return;
+
+    listTabs
+      .querySelectorAll(".tab-btn")
+      .forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    activeTab = btn.dataset.tab;
+    articleList.dataset.activeTab = activeTab;
+    checkScrollState();
+  });
+}
 
 // Settings toggle
 $("btnSettings").addEventListener("click", showSettings);

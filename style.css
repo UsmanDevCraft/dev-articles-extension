@@ -342,30 +342,62 @@ body {
   background: rgba(245, 158, 11, 0.04);
 }
 
-/* ---------- Article List ---------- */
+/* ---------- Article List Tabs ---------- */
 .list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 14px 16px 8px;
 }
 
-.list-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-dark);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.list-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
 }
 
-.list-count {
+.tab-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: inherit;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-text-muted);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tab-btn span {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 6px;
+  border-radius: 100px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.tab-btn:hover {
+  color: var(--color-dark);
+}
+
+.tab-btn.active {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-btn.active span {
+  background: rgba(59, 73, 223, 0.1);
+  color: var(--color-primary);
 }
 
 .article-list {
-  padding: 0 14px 14px;
+  padding: 8px 14px 14px;
   overflow-y: auto;
   max-height: 310px;
   scroll-behavior: smooth;
@@ -494,28 +526,151 @@ body {
   transform: scale(0.96);
 }
 
-/* ---------- Scroll Loader ---------- */
-.scroll-loader {
+/* ---------- Article Actions & Status ---------- */
+.article-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
   gap: 8px;
 }
 
-.scroll-loader .mini-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(59, 73, 223, 0.15);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-.scroll-loader span {
+.article-toggle-read {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 10px;
+  height: 26px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
   color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.article-toggle-read:hover {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.article-card[data-status="read"] .article-toggle-read {
+  background: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+}
+
+.article-status-badge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 18px;
+  height: 18px;
+  background: var(--color-success);
+  border: 2px solid var(--color-surface);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.article-card {
+  position: relative;
+}
+
+.article-card[data-status="read"] .article-status-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Filtering logic */
+.article-list[data-active-tab="unread"] .article-card[data-status="read"] {
+  display: none;
+}
+
+.article-list[data-active-tab="read"] .article-card[data-status="unread"] {
+  display: none;
+}
+
+/* ---------- Shimmer Loader ---------- */
+.shimmer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+
+.shimmer-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.6) 20%, rgba(255, 255, 255, 0.9) 60%, rgba(255, 255, 255, 0));
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+}
+
+.shimmer-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shimmer-line {
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.shimmer-line.title {
+  width: 90%;
+  height: 14px;
+}
+
+.shimmer-line.author {
+  width: 60%;
+  margin-bottom: 4px;
+}
+
+.shimmer-btn {
+  width: 80px;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* ---------- Settings Panel ---------- */

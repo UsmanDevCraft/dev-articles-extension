@@ -35,15 +35,34 @@
     </header>
 
     <!-- Article List -->
+    <!-- Article List Tabs -->
     <div class="list-header" id="listHeader">
-      <span class="list-title">Your Reading List</span>
-      <span class="list-count" id="listCount"></span>
+      <div class="list-tabs" id="listTabs">
+        <button class="tab-btn active" data-tab="all">All <span id="countAll"></span></button>
+        <button class="tab-btn" data-tab="unread">Unread <span id="countUnread"></span></button>
+        <button class="tab-btn" data-tab="read">Read <span id="countRead"></span></button>
+      </div>
     </div>
-    <div class="article-list" id="articleList">
+
+    <div class="article-list" id="articleList" data-active-tab="all">
       <!-- Cards injected here by JS -->
-      <div id="scrollLoader" class="scroll-loader hidden">
-        <div class="mini-spinner"></div>
-        <span>Loading more…</span>
+      <div id="scrollLoader" class="shimmer-container hidden">
+        <div class="shimmer-card">
+          <div class="shimmer-avatar"></div>
+          <div class="shimmer-content">
+            <div class="shimmer-line title"></div>
+            <div class="shimmer-line author"></div>
+            <div class="shimmer-btn"></div>
+          </div>
+        </div>
+        <div class="shimmer-card">
+          <div class="shimmer-avatar"></div>
+          <div class="shimmer-content">
+            <div class="shimmer-line title" style="width: 70%;"></div>
+            <div class="shimmer-line author" style="width: 40%;"></div>
+            <div class="shimmer-btn"></div>
+          </div>
+        </div>
       </div>
     </div>
 
