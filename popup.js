@@ -196,15 +196,22 @@ async function loadMore() {
 // ---------- Render new batch of articles ----------
 function renderNewArticles(items) {
   const startIdx = articleList.querySelectorAll(".article-card").length;
+  const now = Date.now();
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
   items.forEach((item, i) => {
     const article = item.article;
     if (featuredArticle && article.id === featuredArticle.article.id) return;
 
     const isRead = readArticles.includes(article.id);
+    const savedAt = new Date(item.created_at).getTime();
+    const daysOld = (now - savedAt) / MS_PER_DAY;
+    const isReminder = daysOld <= 31;
+
     const card = document.createElement("div");
     card.className = "article-card";
     card.dataset.status = isRead ? "read" : "unread";
+    card.dataset.reminder = isReminder ? "true" : "false";
     card.dataset.id = article.id;
     card.style.animationDelay = `${(startIdx + i) * 0.04}s`;
 
@@ -215,6 +222,7 @@ function renderNewArticles(items) {
 
     card.innerHTML = `
       <div class="article-status-badge">✓</div>
+      <div class="reminder-status-badge" title="Reminder Active">⏰</div>
       ${avatarHTML}
       <div class="article-body">
         <div class="article-title">${escapeHTML(article.title)}</div>

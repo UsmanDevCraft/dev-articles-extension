@@ -77,6 +77,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       const savedAt = new Date(item.created_at).getTime();
       const daysOld = (now - savedAt) / MS_PER_DAY;
 
+      if (daysOld > 31) continue; // Skip articles whose created at is more than a month
+
       let targetStage = 0;
       if (daysOld >= 30) targetStage = 30;
       else if (daysOld >= 14) targetStage = 14;
@@ -93,25 +95,24 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
           else if (targetStage === 3) stageLabel = "3 days";
 
           // Send notification
-          chrome.notifications.create(
-            `unsticker-${article.id}-${targetStage}`,
-            {
-              type: "basic",
-              iconUrl: "icons/icon128.png",
-              title: `📚 Saved ${stageLabel} ago!`,
-              message: `"${article.title}" by ${article.user?.name || "a Dev.to author"}`,
-              priority: 2,
-            },
-          );
+          const notifId = `unsticker-${article.id}-${targetStage}`;
+          chrome.notifications.create(notifId, {
+            type: "basic",
+            iconUrl: "icons/icon128.png",
+            title: `📚 Saved ${stageLabel} ago!`,
+            message: `"${article.title}" by ${article.user?.name || "a Dev.to author"}`,
+            priority: 2,
+          });
 
-          // Store the URL so we can open it when clicked
-          await chrome.storage.local.set({ lastNotifUrl: article.url });
+          // Store the URL specific to this notification so multiple won't override
+          const urlKey = `notifUrl_${notifId}`;
+          await chrome.storage.local.set({ [urlKey]: article.url });
 
           notifiedStages[article.id] = targetStage;
           notifiedCount++;
 
-          // Limit to 1 notification per check to avoid spamming the user
-          break;
+          // Prevent spam by capping at 5 notifications per check
+          if (notifiedCount >= 5) break;
         }
       }
     }
@@ -131,9 +132,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   if (!notificationId.startsWith("unsticker-")) return;
 
-  const data = await chrome.storage.local.get("lastNotifUrl");
-  if (data.lastNotifUrl) {
-    chrome.tabs.create({ url: data.lastNotifUrl });
+  const urlKey = `notifUrl_${notificationId}`;
+  const data = await chrome.storage.local.get(urlKey);
+  if (data[urlKey]) {
+    chrome.tabs.create({ url: data[urlKey] });
+    chrome.storage.local.remove(urlKey); // cleanup
   }
 
   chrome.notifications.clear(notificationId);
