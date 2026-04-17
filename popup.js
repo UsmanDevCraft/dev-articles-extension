@@ -28,8 +28,6 @@ const stateLoading = $("stateLoading");
 const stateError = $("stateError");
 const errorMsg = $("errorMsg");
 const apiKeyInput = $("apiKeyInput");
-const reminderValueInput = $("reminderValueInput");
-const reminderUnitSelect = $("reminderUnitSelect");
 const enableReminderCheckbox = $("enableReminderCheckbox");
 const toast = $("toast");
 const scrollLoader = $("scrollLoader");
@@ -311,24 +309,16 @@ articleList.addEventListener("scroll", () => {
 document.addEventListener("DOMContentLoaded", async () => {
   const data = await chrome.storage.local.get([
     "devtoApiKey",
-    "reminderValue",
-    "reminderUnit",
     "reminderEnabled",
     "readArticles",
   ]);
   const apiKey = data.devtoApiKey || "";
-  const rValue = data.reminderValue ?? 4;
-  const rUnit = data.reminderUnit || "hours";
   const rEnabled = data.reminderEnabled ?? true;
   readArticles = data.readArticles || [];
 
-  reminderStatus.textContent = rEnabled
-    ? `${rValue} ${rUnit.charAt(0)}`
-    : "off";
+  reminderStatus.textContent = rEnabled ? "on" : "off";
 
   apiKeyInput.value = apiKey;
-  if (reminderValueInput) reminderValueInput.value = rValue;
-  if (reminderUnitSelect) reminderUnitSelect.value = rUnit;
   if (enableReminderCheckbox) enableReminderCheckbox.checked = rEnabled;
 
   if (!apiKey) {
@@ -385,33 +375,11 @@ $("retryBtn").addEventListener("click", () => {
   });
 });
 
-// Unit selection constraints
-if (reminderUnitSelect) {
-  reminderUnitSelect.addEventListener("change", (e) => {
-    if (e.target.value === "months") {
-      reminderValueInput.max = "1";
-      if (parseInt(reminderValueInput.value) > 1) {
-        reminderValueInput.value = "1";
-      }
-    } else {
-      reminderValueInput.removeAttribute("max");
-    }
-  });
-}
-
-if (reminderValueInput) {
-  reminderValueInput.addEventListener("input", (e) => {
-    if (reminderUnitSelect.value === "months" && parseInt(e.target.value) > 1) {
-      e.target.value = "1";
-    }
-  });
-}
+// Settings toggle
 
 // Save Settings
 $("btnSave").addEventListener("click", async () => {
   const key = apiKeyInput.value.trim();
-  let rValue = parseInt(reminderValueInput?.value, 10);
-  const rUnit = reminderUnitSelect?.value || "hours";
   const rEnabled = enableReminderCheckbox
     ? enableReminderCheckbox.checked
     : true;
@@ -422,21 +390,14 @@ $("btnSave").addEventListener("click", async () => {
     return;
   }
 
-  if (isNaN(rValue) || rValue < 1) rValue = 1;
-  if (rUnit === "months" && rValue > 1) rValue = 1;
-
   await chrome.storage.local.set({
     devtoApiKey: key,
-    reminderValue: rValue,
-    reminderUnit: rUnit,
     reminderEnabled: rEnabled,
   });
 
   chrome.runtime.sendMessage({ type: "UPDATE_ALARM" });
 
-  reminderStatus.textContent = rEnabled
-    ? `${rValue} ${rUnit.charAt(0)}`
-    : "off";
+  reminderStatus.textContent = rEnabled ? "on" : "off";
   showToast("✅ Settings saved!");
 
   showMain();
