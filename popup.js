@@ -28,7 +28,9 @@ const stateLoading = $("stateLoading");
 const stateError = $("stateError");
 const errorMsg = $("errorMsg");
 const apiKeyInput = $("apiKeyInput");
-const intervalSelector = $("intervalSelector");
+const reminderValueInput = $("reminderValueInput");
+const reminderUnitSelect = $("reminderUnitSelect");
+const enableReminderCheckbox = $("enableReminderCheckbox");
 const toast = $("toast");
 const scrollLoader = $("scrollLoader");
 
@@ -309,19 +311,25 @@ articleList.addEventListener("scroll", () => {
 document.addEventListener("DOMContentLoaded", async () => {
   const data = await chrome.storage.local.get([
     "devtoApiKey",
-    "reminderHours",
+    "reminderValue",
+    "reminderUnit",
+    "reminderEnabled",
     "readArticles",
   ]);
   const apiKey = data.devtoApiKey || "";
-  const hours = data.reminderHours ?? 4;
+  const rValue = data.reminderValue ?? 4;
+  const rUnit = data.reminderUnit || "hours";
+  const rEnabled = data.reminderEnabled ?? true;
   readArticles = data.readArticles || [];
 
-  reminderStatus.textContent = hours > 0 ? `${hours}h` : "off";
+  reminderStatus.textContent = rEnabled
+    ? `${rValue} ${rUnit.charAt(0)}`
+    : "off";
 
   apiKeyInput.value = apiKey;
-  intervalSelector.querySelectorAll(".interval-option").forEach((btn) => {
-    btn.classList.toggle("active", parseInt(btn.dataset.hours) === hours);
-  });
+  if (reminderValueInput) reminderValueInput.value = rValue;
+  if (reminderUnitSelect) reminderUnitSelect.value = rUnit;
+  if (enableReminderCheckbox) enableReminderCheckbox.checked = rEnabled;
 
   if (!apiKey) {
     setVisibleState("stateNoKey");
@@ -377,23 +385,36 @@ $("retryBtn").addEventListener("click", () => {
   });
 });
 
-// Interval selection
-intervalSelector.addEventListener("click", (e) => {
-  const btn = e.target.closest(".interval-option");
-  if (!btn) return;
-  intervalSelector
-    .querySelectorAll(".interval-option")
-    .forEach((b) => b.classList.remove("active"));
-  btn.classList.add("active");
-});
+// Unit selection constraints
+if (reminderUnitSelect) {
+  reminderUnitSelect.addEventListener("change", (e) => {
+    if (e.target.value === "months") {
+      reminderValueInput.max = "1";
+      if (parseInt(reminderValueInput.value) > 1) {
+        reminderValueInput.value = "1";
+      }
+    } else {
+      reminderValueInput.removeAttribute("max");
+    }
+  });
+}
+
+if (reminderValueInput) {
+  reminderValueInput.addEventListener("input", (e) => {
+    if (reminderUnitSelect.value === "months" && parseInt(e.target.value) > 1) {
+      e.target.value = "1";
+    }
+  });
+}
 
 // Save Settings
 $("btnSave").addEventListener("click", async () => {
   const key = apiKeyInput.value.trim();
-  const activeInterval = intervalSelector.querySelector(
-    ".interval-option.active",
-  );
-  const hours = activeInterval ? parseInt(activeInterval.dataset.hours) : 4;
+  let rValue = parseInt(reminderValueInput?.value, 10);
+  const rUnit = reminderUnitSelect?.value || "hours";
+  const rEnabled = enableReminderCheckbox
+    ? enableReminderCheckbox.checked
+    : true;
 
   if (!key) {
     showToast("⚠️ Please enter an API key");
@@ -401,11 +422,21 @@ $("btnSave").addEventListener("click", async () => {
     return;
   }
 
-  await chrome.storage.local.set({ devtoApiKey: key, reminderHours: hours });
+  if (isNaN(rValue) || rValue < 1) rValue = 1;
+  if (rUnit === "months" && rValue > 1) rValue = 1;
 
-  chrome.runtime.sendMessage({ type: "UPDATE_ALARM", hours });
+  await chrome.storage.local.set({
+    devtoApiKey: key,
+    reminderValue: rValue,
+    reminderUnit: rUnit,
+    reminderEnabled: rEnabled,
+  });
 
-  reminderStatus.textContent = hours > 0 ? `${hours}h` : "off";
+  chrome.runtime.sendMessage({ type: "UPDATE_ALARM" });
+
+  reminderStatus.textContent = rEnabled
+    ? `${rValue} ${rUnit.charAt(0)}`
+    : "off";
   showToast("✅ Settings saved!");
 
   showMain();

@@ -13,18 +13,47 @@ chrome.runtime.onStartup.addListener(async () => {
 
 // ---------- Set up alarm based on stored interval ----------
 async function setupAlarm() {
-  const data = await chrome.storage.local.get("reminderHours");
-  const hours = data.reminderHours ?? 4;
+  const data = await chrome.storage.local.get([
+    "reminderValue",
+    "reminderUnit",
+    "reminderEnabled",
+  ]);
+  const rValue = data.reminderValue ?? 4;
+  const rUnit = data.reminderUnit || "hours";
+  const rEnabled = data.reminderEnabled ?? true;
 
   // Clear any existing alarm
   await chrome.alarms.clear(ALARM_NAME);
 
-  if (hours > 0) {
+  if (rEnabled) {
+    let multiplier = 60; // default hours
+    switch (rUnit) {
+      case "minutes":
+        multiplier = 1;
+        break;
+      case "hours":
+        multiplier = 60;
+        break;
+      case "days":
+        multiplier = 60 * 24;
+        break;
+      case "weeks":
+        multiplier = 60 * 24 * 7;
+        break;
+      case "months":
+        multiplier = 60 * 24 * 30;
+        break;
+    }
+
+    const minutes = rValue * multiplier;
+
     chrome.alarms.create(ALARM_NAME, {
-      delayInMinutes: hours * 60,
-      periodInMinutes: hours * 60,
+      delayInMinutes: minutes,
+      periodInMinutes: minutes,
     });
-    console.log(`[Un-Sticker] Alarm set: every ${hours} hour(s).`);
+    console.log(
+      `[Un-Sticker] Alarm set: every ${rValue} ${rUnit} (${minutes} mins).`,
+    );
   } else {
     console.log("[Un-Sticker] Reminders disabled.");
   }
